@@ -1,0 +1,21 @@
+name: Vinted Mail Monitor
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  check_mails:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pobierz kod
+        uses: actions/checkout@v4
+
+      - name: Uruchom skrypt sprawdzający pocztę
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ACCOUNTS_JSON: ${{ secrets.ACCOUNTS_JSON }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+        run: python3 monitor.py
