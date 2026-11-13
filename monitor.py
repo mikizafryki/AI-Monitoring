@@ -96,9 +96,9 @@ def check_account(acc, tg_token, tg_chat_id):
         return False, f"{label} ({user_email}): {e}"
 
 def main():
-    tg_token = os.environ.get("TELEGRAM_TOKEN")
-    tg_chat_id = os.environ.get("TELEGRAM_CHAT_ID")
-    accounts_raw = os.environ.get("ACCOUNTS_JSON")
+    tg_token = os.environ.get("TELEGRAM_TOKEN", "").strip()
+    tg_chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+    accounts_raw = os.environ.get("ACCOUNTS_JSON", "").strip()
     event_name = os.environ.get("GITHUB_EVENT_NAME", "")
 
     if not (tg_token and tg_chat_id and accounts_raw):
@@ -106,10 +106,23 @@ def main():
         return
 
     accounts = json.loads(accounts_raw)
+    if isinstance(accounts, str):
+        accounts = json.loads(accounts)
+    if isinstance(accounts, dict):
+        if "email" in accounts:
+            accounts = [accounts]
+        else:
+            for v in accounts.values():
+                if isinstance(v, list):
+                    accounts = v
+                    break
+
     ok_count = 0
     errors = []
 
     for acc in accounts:
+        if not isinstance(acc, dict) or "email" not in acc:
+            continue
         ok, err = check_account(acc, tg_token, tg_chat_id)
         if ok:
             ok_count += 1
@@ -120,7 +133,7 @@ def main():
     if event_name == "workflow_dispatch":
         msg = f"✅ Test monitoringu zakończony!\nPołączono poprawnie z {ok_count}/{len(accounts)} skrzynkami."
         if errors:
-            msg += "\n\n⚠️ Błędy logowania:\n" + "\n".join(errors[:5])
+            msg += "\n\n⚠️ Błędy logowania:\n" + "\n".join(errors[:10])
         send_telegram(tg_token, tg_chat_id, msg)
 
 if __name__ == "__main__":
