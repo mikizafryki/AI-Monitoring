@@ -6,6 +6,7 @@ import urllib.parse
 import json
 import os
 import datetime
+import ssl
 
 IMAP_SERVERS = {
     "wp.pl": "imap.wp.pl",
@@ -45,7 +46,15 @@ def send_telegram(token, chat_id, text):
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     data = urllib.parse.urlencode({"chat_id": chat_id, "text": text}).encode("utf-8")
     req = urllib.request.Request(url, data=data)
-    urllib.request.urlopen(req, timeout=10)
+    urllib.request.urlopen(req, timeout=15)
+
+def connect_imap(imap_host):
+    try:
+        return imaplib.IMAP4_SSL(imap_host, 993, timeout=30)
+    except Exception:
+        mail = imaplib.IMAP4(imap_host, 143, timeout=30)
+        mail.starttls(ssl_context=ssl.create_default_context())
+        return mail
 
 def check_account(acc, tg_token, tg_chat_id):
     label = acc.get("konto", "Konto")
@@ -58,7 +67,7 @@ def check_account(acc, tg_token, tg_chat_id):
         return False, f"{label}: nieznana domena ({domain})"
 
     try:
-        mail = imaplib.IMAP4_SSL(imap_host, 993, timeout=15)
+        mail = connect_imap(imap_host)
         mail.login(user_email, password)
         mail.select("INBOX")
 
